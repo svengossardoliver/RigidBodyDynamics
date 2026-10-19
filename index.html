@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rigid Body Dynamics</title>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04070d; --text:#f4f8ff; --label:#c3d3e8; --line:#33476a;
+  --cyan:#5ee7ff; --amber:#ffc53d; --green:#6bff9e; --red:#ff6b6b;
+  --sans:'Oxanium','Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --mono:'JetBrains Mono',Consolas,Menlo,'Courier New',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh; color:var(--text); font-family:var(--sans); font-weight:600; font-size:17px;
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(1px 1px at 23px 41px,#ffffffaa,transparent),
+    radial-gradient(1px 1px at 141px 97px,#ffffff77,transparent),
+    radial-gradient(1.5px 1.5px at 77px 173px,#ffffffcc,transparent),
+    radial-gradient(1px 1px at 189px 13px,#9fd8ff99,transparent),
+    radial-gradient(1px 1px at 211px 151px,#ffffff66,transparent);
+  background-size:240px 220px;
+}
+.mono{font-family:var(--mono)}
+/* ---------- header ---------- */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 22px;border-bottom:3px solid #1c2840;background:linear-gradient(#17223a,#0a101c);box-shadow:0 2px 0 #000}
+.brand{display:flex;align-items:center;gap:16px}
+.port{width:58px;height:58px;border-radius:50%;border:5px solid #4a5f80;box-shadow:inset 0 0 0 2px #0a0f18,0 0 0 2px #10192a,0 0 14px #5ee7ff33;position:relative;overflow:hidden;
+  background:radial-gradient(1px 1px at 12px 10px,#fff,transparent),radial-gradient(1px 1px at 30px 18px,#fff9,transparent),radial-gradient(1px 1px at 20px 30px,#fffa,transparent),#02040a}
+.earth{position:absolute;width:90px;height:90px;border-radius:50%;left:-10px;top:26px;background:radial-gradient(circle at 40% 30%,#4fa3e0,#1b4f8a 55%,#0b2240);box-shadow:0 0 12px 3px #4fa3e066}
+h1{margin:0;font-size:30px;letter-spacing:3px;text-transform:uppercase;font-weight:800;color:#fff;text-shadow:0 0 12px #5ee7ff55}
+.sub{color:var(--amber);font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:2px}
+.tabs{display:flex;gap:0;border:2px solid #4a5f80;border-radius:6px;overflow:hidden;box-shadow:0 2px 0 #000}
+.tab{font-family:var(--sans);font-weight:800;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:10px 22px;border:0;background:linear-gradient(#22304a,#131c2e);color:var(--label);cursor:pointer}
+.tab.on{color:#03121a;background:linear-gradient(#8ff0ff,#3fcdea);text-shadow:none}
+/* ---------- layout & panels ---------- */
+main{display:flex;flex-wrap:wrap;gap:20px;padding:20px;justify-content:center;align-items:flex-start}
+.plate{
+  position:relative; border:2px solid #3b5072; border-radius:8px;
+  background:
+    radial-gradient(circle at 9px 9px,#8ea3bf 0 2px,#2a384f 2.5px,transparent 3.5px),
+    radial-gradient(circle at calc(100% - 9px) 9px,#8ea3bf 0 2px,#2a384f 2.5px,transparent 3.5px),
+    radial-gradient(circle at 9px calc(100% - 9px),#8ea3bf 0 2px,#2a384f 2.5px,transparent 3.5px),
+    radial-gradient(circle at calc(100% - 9px) calc(100% - 9px),#8ea3bf 0 2px,#2a384f 2.5px,transparent 3.5px),
+    linear-gradient(#141e31,#0c1322);
+  box-shadow:inset 0 1px 0 #ffffff1a,0 3px 0 #000,0 6px 18px #0008;
+}
+.bayCard{padding:16px;width:min(712px,100%)}
+canvas#bay{width:100%;aspect-ratio:1/1;display:block;border-radius:4px;touch-action:none;border:2px solid #000}
+.hud{display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px;padding:8px 12px;background:#020509;border:1px solid #2a3d5a;border-radius:4px;box-shadow:inset 0 2px 8px #000;font-family:var(--mono);font-weight:800;font-size:17px;color:var(--green);text-shadow:0 0 8px #6bff9e66}
+.hud .led{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);margin-right:8px;vertical-align:1px}
+#hudStatus.burn{color:var(--amber);text-shadow:0 0 8px #ffc53d88}
+#hudStatus.burn .led{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+#hudTime{color:var(--cyan);text-shadow:0 0 8px #5ee7ff66}
+.ctl{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.btn{font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 16px;border-radius:5px;border:1px solid #5a7398;background:linear-gradient(#2c3d5c,#18233a);color:#fff;cursor:pointer;box-shadow:inset 0 1px 0 #ffffff2a,0 3px 0 #000}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #ffffff2a,0 1px 0 #000}
+.btn.amber{background:linear-gradient(#ffd666,#e9a514);color:#1d1100;border-color:#ffe08a}
+.btn.amber:hover{color:#1d1100;filter:brightness(1.08)}
+.btn.cyan{background:linear-gradient(#8ff0ff,#33c4e3);color:#03121a;border-color:#b5f6ff}
+.btn.cyan:hover{color:#03121a;filter:brightness(1.08)}
+.btn.small{font-size:13px;padding:6px 11px}
+.btn:disabled{opacity:.4;cursor:default}
+.caption{color:var(--label);font-size:14px;font-weight:600;margin:12px 2px 2px;line-height:1.5}
+.caption b{color:var(--amber)}
+.panel{width:min(430px,100%);display:flex;flex-direction:column;gap:14px}
+.sec{padding:0 16px 14px}
+.sec h3{margin:0 -16px 12px;padding:10px 16px 8px 30px;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:2.5px;text-transform:uppercase;color:var(--amber);background:linear-gradient(#1f2c45,#172238);border-bottom:2px solid #ffc53d66;border-radius:6px 6px 0 0;position:relative}
+.sec h3::before{content:'';position:absolute;left:14px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}
+.row .lab,.row label{min-width:96px;color:var(--label);font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:1px}
+label.chk{min-width:0;text-transform:none;letter-spacing:0;font-size:16px;color:var(--text);display:flex;align-items:center;gap:8px;cursor:pointer}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--cyan)}
+input[type=number],input[type=text]{width:90px;background:#020509;color:var(--cyan);border:1px solid #3a5072;border-radius:4px;padding:6px 8px;font-family:var(--mono);font-weight:800;font-size:16px;box-shadow:inset 0 2px 6px #000;text-shadow:0 0 6px #5ee7ff44}
+input:focus{outline:2px solid var(--cyan);outline-offset:1px}
+input:disabled{color:#9fb4cf;opacity:.8}
+.u{color:var(--label);font-family:var(--mono);font-weight:700;font-size:14px}
+.ro-val{font-family:var(--mono);font-weight:800;color:var(--cyan);font-size:16px}
+.hint{color:var(--label);font-size:15px;font-weight:600;margin:4px 0;line-height:1.45}
+.seg{display:flex;border:1px solid #5a7398;border-radius:5px;overflow:hidden;box-shadow:0 3px 0 #000}
+.seg button{font-family:var(--sans);font-weight:800;font-size:14px;letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border:0;background:linear-gradient(#2c3d5c,#18233a);color:var(--label);cursor:pointer}
+.seg button.on{background:linear-gradient(#ffd666,#e9a514);color:#1d1100}
+/* ---------- readouts ---------- */
+table.ro{width:100%;border-collapse:collapse;font-family:var(--mono);font-weight:700;font-size:15px;background:#020509;border:1px solid #2a3d5a;border-radius:4px;box-shadow:inset 0 2px 8px #000}
+table.ro th{color:var(--label);font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;text-align:right;padding:6px 8px;border-bottom:1px solid #2a3d5a}
+table.ro td{text-align:right;padding:4px 8px;color:#e8f2ff}
+table.ro th:first-child,table.ro td:first-child{text-align:left}
+table.ro tr.sel td{color:var(--cyan)}
+table.ro tr.tot td{border-top:1px solid #2a3d5a;color:var(--amber);font-weight:800;font-size:16px;text-shadow:0 0 8px #ffc53d55}
+.grp{margin:14px 0 6px;font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:#020509;border:1px solid #2a3d5a;border-radius:5px;padding:6px 10px 7px;box-shadow:inset 0 2px 8px #000}
+.tile .tl{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:1.2px;color:var(--label);text-transform:uppercase}
+.tile .tv{font-family:var(--mono);font-weight:800;font-size:20px;color:var(--cyan);text-shadow:0 0 8px #5ee7ff55;white-space:nowrap}
+.tile .tu{font-size:13px;font-weight:700;color:var(--label);margin-left:5px;text-shadow:none}
+.tile.amber .tv{color:var(--amber);text-shadow:0 0 8px #ffc53d55}
+.tile.green .tv{color:var(--green);text-shadow:0 0 8px #6bff9e55}
+.tile.wide{grid-column:1/3}
+#graph{width:100%;height:160px;display:block;background:#020509;border:1px solid #2a3d5a;border-radius:4px;box-shadow:inset 0 2px 8px #000}
+/* ---------- detective ---------- */
+.pips{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.pip{width:18px;height:18px;border-radius:50%;border:2px solid var(--cyan);background:#020509}
+.pip.done{background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.pip.cur{box-shadow:0 0 0 3px #5ee7ff55}
+.lvl{font-weight:800;color:var(--amber);font-size:14px;letter-spacing:1.5px;margin-left:6px;text-transform:uppercase}
+.prompt{background:#020509;border:1px solid #2a3d5a;border-left:4px solid var(--amber);padding:12px 14px;font-size:18px;font-weight:600;line-height:1.5;border-radius:4px;box-shadow:inset 0 2px 8px #000}
+.prompt b{color:var(--amber);font-weight:800}
+.given{font-family:var(--mono);font-weight:700;font-size:14px;color:#e8f2ff;margin:10px 0 0;padding-left:18px;line-height:1.65}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chip{font-family:var(--mono);font-weight:800;font-size:15px;padding:7px 12px;border-radius:20px;border:2px solid var(--amber);background:#2a1c06;color:var(--amber);cursor:pointer;box-shadow:0 3px 0 #000}
+.chip:disabled{opacity:.3;cursor:default}
+.fb{list-style:none;padding:0;margin:0;font-size:16px;font-weight:700}
+.fb li{padding:4px 0}
+.fb .ok{color:var(--green)} .fb .no{color:var(--red)}
+.banner{margin-top:10px;padding:10px 12px;border-radius:4px;font-weight:800;font-size:17px}
+.banner.ok{background:#0b3a22;color:var(--green);border:1px solid #6bff9e66}
+.banner.help{background:#3a2a08;color:var(--amber);border:1px solid #ffc53d66}
+.solution{margin-top:10px;font-size:16px;font-weight:600;line-height:1.55}
+.solution b{color:var(--amber)}
+.solsec{border-top:1px solid #2a3d5a;padding-top:8px;margin-top:8px}
+.solsec h4{margin:0 0 4px;color:var(--cyan);font-weight:800;font-size:14px;letter-spacing:1.5px;text-transform:uppercase}
+.st{margin:3px 0}
+.note{color:var(--amber);font-weight:700;margin:8px 0 2px}
+textarea{width:100%;min-height:110px;background:#020509;color:#e8f2ff;border:1px solid #3a5072;border-radius:4px;padding:10px;font-family:var(--mono);font-weight:700;font-size:15px;resize:vertical;box-shadow:inset 0 2px 8px #000}
+#winOverlay{position:fixed;inset:0;background:#02050bdd;display:flex;align-items:center;justify-content:center;z-index:10}
+.winBox{padding:34px 44px;text-align:center;max-width:460px}
+.winBox h2{margin:0 0 10px;font-size:32px;letter-spacing:3px;color:var(--cyan);font-weight:800;text-shadow:0 0 14px #5ee7ff88}
+.winBox p{font-size:18px}
+/* ---------- emergency mission ---------- */
+.systems{list-style:none;margin:0 0 12px;padding:0;background:#020509;border:1px solid #2a3d5a;border-radius:4px;box-shadow:inset 0 2px 8px #000}
+.systems li{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid #16233a;font-weight:700;font-size:15px;letter-spacing:.5px}
+.systems li:last-child{border-bottom:0}
+.systems .st-off{font-family:var(--mono);font-weight:800;color:var(--red);text-shadow:0 0 8px #ff6b6b88}
+.systems .st-on{font-family:var(--mono);font-weight:800;color:var(--green);text-shadow:0 0 8px #6bff9e88}
+.systems .st-cur{font-family:var(--mono);font-weight:800;color:var(--amber);animation:blink 1s steps(2) infinite}
+.systems li.cur{background:#2a1c0633}
+.story{margin:0 0 10px;padding:10px 12px;border-radius:4px;background:#2a0b0b;border:1px solid #ff6b6b77;color:#ffd9d9;font-size:16px;font-weight:600;line-height:1.45}
+.story b{color:#ff8a8a;font-weight:800;letter-spacing:1px}
+@keyframes blink{50%{opacity:.25}}
+@keyframes alarm{0%,100%{box-shadow:inset 0 1px 0 #ffffff1a,0 3px 0 #000,0 0 0 2px #ff3b3b55,0 0 22px #ff3b3b44}50%{box-shadow:inset 0 1px 0 #ffffff1a,0 3px 0 #000,0 0 0 2px #ff3b3b,0 0 34px #ff3b3baa}}
+.bayCard.alarm{animation:alarm 1.6s ease-in-out infinite;border-color:#ff5a5a}
+.alertbar{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:8px 12px;border-radius:4px;background:repeating-linear-gradient(-45deg,#3a0a0a 0 12px,#2a0606 12px 24px);border:1px solid #ff5a5a;color:#fff;font-weight:800;letter-spacing:1.5px;font-size:15px;text-transform:uppercase}
+.alertbar .dot{width:12px;height:12px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 10px #ff3b3b;animation:blink .8s steps(2) infinite}
+.alertbar.safe{background:#0b3a22;border-color:#6bff9e;color:var(--green)}
+.alertbar.safe .dot{background:var(--green);box-shadow:0 0 10px var(--green);animation:none}
+.overlay{position:fixed;inset:0;background:#02050be6;display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+.brief{padding:30px 36px;max-width:560px}
+.brief h2{margin:0 0 6px;font-size:30px;letter-spacing:3px;color:#ff6b6b;font-weight:800;text-shadow:0 0 14px #ff3b3b88}
+.brief .from{font-family:var(--mono);font-weight:800;color:var(--amber);font-size:14px;letter-spacing:1px;margin-bottom:12px}
+.brief p{font-size:17px;line-height:1.55;margin:10px 0}
+.brief ol{margin:8px 0 16px 0;padding-left:22px;font-size:16px;line-height:1.6}
+.brief ol li span{color:var(--label)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="port"><div class="earth"></div></div>
+    <div><h1>Rotation Bay</h1><div class="sub">DECK 3 · FREE-FALL ROTATIONAL DYNAMICS LAB</div></div>
+  </div>
+  <nav class="tabs">
+    <button id="tabSandbox" class="tab on">Sandbox</button>
+    <button id="tabDetective" class="tab">Rescue Mission</button>
+  </nav>
+</header>
+
+<main>
+  <section class="bayCard plate" id="bayCardEl">
+    <canvas id="bay"></canvas>
+    <div class="hud"><span id="hudStatus"><span class="led"></span><span id="hudText">READY</span></span><span id="hudTime">t = 0.00 s</span></div>
+    <div class="ctl">
+      <button id="btnFire" class="btn amber">▶ Fire thruster</button>
+      <button id="btnPause" class="btn">❚❚ Pause</button>
+      <button id="btnReset" class="btn">⟲ Reset</button>
+    </div>
+    <p class="caption" id="caption"></p>
+  </section>
+
+  <aside class="panel">
+    <!-- SANDBOX TOP -->
+    <div id="sbTop" class="sec plate">
+      <h3>Build</h3>
+      <div class="row"><span class="lab">Axle</span><div class="seg"><button id="segBolt" class="on">Bolted</button><button id="segFree">Free-floating</button></div></div>
+      <div class="row" id="camRow" hidden><label class="chk"><input id="chkCam" type="checkbox" checked> Camera follows centre of mass</label></div>
+      <div class="row"><label>New mass</label><input id="newMass" type="number" step="0.1" min="0.1" max="10" value="1.0"><span class="u">kg</span><button id="btnAddMass" class="btn small">+ Add mass</button></div>
+      <div class="row"><button id="btnThrusterSb" class="btn small">+ Add thruster</button><button id="btnClear" class="btn small">Clear masses</button></div>
+      <div class="row"><label class="chk"><input id="chkVec" type="checkbox" checked> Show r, θ and lever arm</label></div>
+    </div>
+
+    <!-- DETECTIVE TOP -->
+    <div id="dtTop" class="sec plate" hidden>
+      <h3>Emergency repairs</h3>
+      <div class="alertbar" id="alertbar"><span class="dot"></span><span id="alertText">Station in danger</span></div>
+      <ul class="systems" id="systems"></ul>
+      <div class="pips" id="pips"></div>
+      <div class="story" id="story"></div>
+      <div class="prompt" id="prompt"></div>
+      <ul class="given" id="given"></ul>
+      <div id="paletteWrap"><div class="hint" style="margin-top:12px">Palette: click a mass to place it in the bay, then drag it.</div><div class="chips" id="chips"></div></div>
+      <div class="row" id="dtTools"><button id="btnThrusterDt" class="btn small">+ Add thruster</button></div>
+      <div id="answers"></div>
+      <div class="row" id="burnRow"><label>Burn time Δt</label><input id="dBurn" type="number" step="0.1" min="0.1" max="20" value="2.0"><span class="u">s</span></div>
+      <div class="row" style="margin-top:14px"><button id="btnCheck" class="btn cyan">Check</button><button id="btnNewPuzzle" class="btn small">New puzzle (same level)</button></div>
+    </div>
+
+    <!-- SHARED: SELECTION -->
+    <div class="sec plate" id="secSelect"><h3>Selected</h3><div id="selBody"></div></div>
+
+    <!-- SANDBOX BOTTOM -->
+    <div id="sbBottom" class="panel" style="width:100%">
+      <div class="sec plate">
+        <h3>Thrust duration</h3>
+        <div class="row"><label>Burn time Δt</label><input id="sbBurn" type="number" step="0.1" min="0.1" max="60" value="2.0"><span class="u">s</span></div>
+        <div class="row"><label class="chk"><input id="chkCont" type="checkbox"> Continuous thrust (no cut-off)</label></div>
+      </div>
+      <div class="sec plate"><h3>Readouts</h3><div id="readouts"></div></div>
+      <div class="sec plate"><h3>ω against t</h3><canvas id="graph"></canvas></div>
+    </div>
+
+    <!-- DETECTIVE BOTTOM -->
+    <div id="dtBottom" class="panel" style="width:100%" hidden>
+      <div class="sec plate"><h3>Feedback</h3>
+        <div id="feedback" class="hint">Set up the system, then press Check.</div>
+        <div class="row"><button id="btnSolution" class="btn small" hidden>Request worked solution</button><button id="btnNext" class="btn amber" hidden>Next system ›</button></div>
+        <div id="solution" class="solution" hidden></div>
+      </div>
+      <div class="sec plate"><h3>Your working</h3><textarea id="working" placeholder="Scratch space for your calculations…"></textarea>
+        <div class="row"><button id="btnRestart" class="btn small">New emergency (restart from system 1)</button></div></div>
+    </div>
+  </aside>
+</main>
+
+<div id="briefOverlay" class="overlay" hidden>
+  <div class="brief plate">
+    <h2>⚠ MAYDAY</h2>
+    <div class="from">INCOMING · MISSION CONTROL → SPECIALIST ON DECK 3</div>
+    <p>A debris strike has knocked out five rotation systems on the station. Without them it will tumble, lose power and lose life support.</p>
+    <p>You're the only crew member trained in rotational dynamics. The flight computer will give you the exact specification for each system. Rebuild it in the bay and press <b style="color:var(--cyan)">Check</b> to bring it back online.</p>
+    <ol id="briefList"></ol>
+    <p style="color:var(--label);font-size:15px">You can try each repair as many times as you need. After three failed attempts, Mission Control can send up a worked solution, but a repair made that way doesn't count, and you'll have to fix the system again from scratch.</p>
+    <button id="btnBriefGo" class="btn amber">Suit up and start repairs</button>
+  </div>
+</div>
+
+<div id="winOverlay" class="overlay" hidden>
+  <div class="winBox plate">
+    <h2>STATION SAVED</h2>
+    <p>All five systems are back online. The station is stable and life support is running. Mission Control sends its thanks, astronaut.</p>
+    <button id="btnWinNew" class="btn amber">New emergency</button>
+    <button id="btnWinClose" class="btn">Close</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ================= helpers =================
+const $ = id => document.getElementById(id);
+const DEG = Math.PI / 180;
+const SIZE = 680, MARGIN = 40, BAY = 50;          // canvas px, margin px, half-bay in cm
+const PX = (SIZE - 2 * MARGIN) / (2 * BAY);        // px per cm
+const PXN = 22;                                    // arrow px per newton
+const FMAX = 10;
+const MONO = '"JetBrains Mono", Consolas, Menlo, monospace';
+const rnd = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const stepRand = (a, b, s) => +(a + ri(0, Math.round((b - a) / s)) * s).toFixed(4);
+const round3 = v => Number(v.toPrecision(3));
+const mn = s => String(s).replace(/-/g, '−');
+const fx = (v, d) => mn((Math.abs(v) < 0.5 * Math.pow(10, -d) ? 0 : v).toFixed(d));
+function fmt(v, sf = 3) {
+  if (v === undefined || v === null || !isFinite(v)) return '—';
+  if (v === 0) return '0';
+  let t = v.toPrecision(sf);
+  if (t.includes('e')) t = String(Number(t));
+  return mn(t);
+}
+function normDeg(d) { d = ((d % 360) + 360) % 360; if (d > 180) d -= 360; return d; }
+function parseNum(s) { if (s === undefined) return NaN; s = String(s).trim().replace(/−/g, '-').replace(',', '.'); return s === '' ? NaN : parseFloat(s); }
+const dirWord = v => v > 0 ? '(anticlockwise)' : '(clockwise)';
+
+// ================= world & physics =================
+let nextId = 1;
+function makeWorld() {
+  return { masses: [], axis: { x: 0, y: 0, locked: false }, force: null, burn: 2.0, continuous: false, free: false,
+           sim: { running: false, t: 0, snap: null, burn: 2, pos: null, v: null, trail: [] }, hist: [], sel: null };
+}
+const worlds = { sandbox: makeWorld(), detective: makeWorld() };
+let mode = 'sandbox';
+const W = () => worlds[mode];
+
+function physics(o) {
+  const ax = o.axis.x / 100, ay = o.axis.y / 100;
+  let I = 0; const rows = [];
+  for (const m of o.masses) {
+    const dx = m.x / 100 - ax, dy = m.y / 100 - ay, r2 = dx * dx + dy * dy;
+    I += m.m * r2; rows.push({ id: m.id, m: m.m, r: Math.sqrt(r2), mr2: m.m * r2 });
+  }
+  let tau = 0, r = 0, theta = 0, F = 0;
+  if (o.force) {
+    const f = o.force, rx = f.x / 100 - ax, ry = f.y / 100 - ay, a = f.ang * DEG;
+    tau = rx * f.F * Math.sin(a) - ry * f.F * Math.cos(a);
+    r = Math.hypot(rx, ry); F = f.F;
+    theta = r > 0 ? normDeg(f.ang - Math.atan2(ry, rx) / DEG) : 0;
+  }
+  const alpha = I > 1e-12 ? tau / I : (Math.abs(tau) > 0 ? Infinity : 0);
+  return { I, rows, tau, r, theta, F, alpha };
+}
+function centreOfMass(w) {
+  let M = 0, x = 0, y = 0;
+  for (const m of w.masses) { M += m.m; x += m.m * m.x; y += m.m * m.y; }
+  return M > 0 ? { x: x / M, y: y / M, M } : { x: 0, y: 0, M: 0 };
+}
+// physics about the pivot: the axle (bolted) or the centre of mass (free-floating)
+function physicsW(w) {
+  if (!w.free) return physics(w);
+  const c = centreOfMass(w), p = physics({ masses: w.masses, axis: c, force: w.force });
+  p.cm = c; p.M = c.M; p.acm = (w.force && c.M > 0) ? w.force.F / c.M : 0;
+  return p;
+}
+function kin(p, burn, t) {
+  const a = isFinite(p.alpha) ? p.alpha : 0;
+  if (t <= burn) return { phi: 0.5 * a * t * t, omega: a * t, burning: true };
+  const wf = a * burn;
+  return { phi: 0.5 * a * burn * burn + wf * (t - burn), omega: wf, burning: false };
+}
+function currentKin(w) { return w.sim.snap ? kin(w.sim.snap, w.sim.burn, w.sim.t) : { phi: 0, omega: 0, burning: false }; }
+// body frame -> world: pb = pivot in body coords, pw = pivot in world coords
+function frameT(w) {
+  const phi = currentKin(w).phi;
+  if (w.free) {
+    const pb = w.sim.snap ? w.sim.snap.cm : centreOfMass(w);
+    return { pb, pw: w.sim.snap ? w.sim.pos : pb, phi };
+  }
+  return { pb: w.axis, pw: w.axis, phi };
+}
+function b2w(T, x, y) {
+  const dx = x - T.pb.x, dy = y - T.pb.y, c = Math.cos(T.phi), s = Math.sin(T.phi);
+  return [T.pw.x + dx * c - dy * s, T.pw.y + dx * s + dy * c];
+}
+function resetSim(w) { w.sim.running = false; w.sim.t = 0; w.sim.snap = null; w.sim.pos = null; w.sim.v = null; w.sim.trail = []; w.hist = []; }
+function editable(w, kind, id) {
+  if (kind === 'mass') { const m = w.masses.find(q => q.id === id); return m && !m.locked; }
+  if (kind === 'axis') return !w.free && !w.axis.locked;
+  if (kind === 'force') return w.force && !w.force.locked;
+  return false;
+}
+function freeSpot(w) {
+  for (let y = 40; y >= -40; y -= 10) for (let x = -40; x <= 40; x += 10) {
+    const occ = w.masses.some(m => Math.hypot(m.x - x, m.y - y) < 6) || (!w.free && Math.hypot(w.axis.x - x, w.axis.y - y) < 6) ||
+                (w.force && Math.hypot(w.force.x - x, w.force.y - y) < 6);
+    if (!occ) return { x, y };
+  }
+  return { x: 0, y: 0 };
+}
+
+// ================= canvas =================
+const cv = $('bay'), ctx = cv.getContext('2d');
+function setupCanvas() { const d = window.devicePixelRatio || 1; cv.width = SIZE * d; cv.height = SIZE * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+setupCanvas();
+let CAM = { x: 0, y: 0 };                          // camera offset in cm (free-float follow)
+const toPx = (x, y) => [SIZE / 2 + (x - CAM.x) * PX, SIZE / 2 - (y - CAM.y) * PX];
+const fromPx = (px, py) => [(px - SIZE / 2) / PX + CAM.x, (SIZE / 2 - py) / PX + CAM.y];
+function line(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function circ(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const massR = m => 8 + 5 * Math.sqrt(m);
+const bayClip = () => { ctx.beginPath(); ctx.rect(MARGIN, MARGIN, SIZE - 2 * MARGIN, SIZE - 2 * MARGIN); ctx.clip(); };
+
+function drawHull() {
+  ctx.fillStyle = '#0a101b'; ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= SIZE; i += 85) { line(i + .5, 0, i + .5, SIZE); line(0, i + .5, SIZE, i + .5); }
+  ctx.fillStyle = 'rgba(160,180,200,0.25)';
+  for (let i = 12; i < SIZE; i += 24) for (const [x, y] of [[i, 6], [i, SIZE - 6], [6, i], [SIZE - 6, i]]) { circ(x, y, 1.5); ctx.fill(); }
+  const b0 = MARGIN - 9, bs = SIZE - 2 * MARGIN + 18;
+  ctx.save(); ctx.beginPath(); ctx.rect(b0, b0, bs, bs); ctx.rect(MARGIN, MARGIN, SIZE - 2 * MARGIN, SIZE - 2 * MARGIN); ctx.clip('evenodd');
+  ctx.fillStyle = '#17120a'; ctx.fillRect(b0, b0, bs, bs);
+  ctx.strokeStyle = 'rgba(255,197,61,0.6)'; ctx.lineWidth = 5;
+  for (let k = -SIZE; k < SIZE * 2; k += 16) line(k, 0, k + SIZE, SIZE);
+  ctx.restore();
+}
+function drawFloor() {
+  const x0 = MARGIN, s = SIZE - 2 * MARGIN;
+  const g = ctx.createRadialGradient(SIZE / 2, SIZE / 2, 30, SIZE / 2, SIZE / 2, s * 0.75);
+  g.addColorStop(0, '#13233a'); g.addColorStop(1, '#0a1322');
+  ctx.fillStyle = g; ctx.fillRect(x0, x0, s, s);
+  ctx.save(); bayClip(); ctx.lineWidth = 1;
+  const xs = Math.floor(CAM.x - BAY), xe = Math.ceil(CAM.x + BAY), ys = Math.floor(CAM.y - BAY), ye = Math.ceil(CAM.y + BAY);
+  const mod10 = c => ((c % 10) + 10) % 10;
+  ctx.strokeStyle = 'rgba(94,231,255,0.06)';
+  for (let c = xs; c <= xe; c++) if (mod10(c)) { const p = Math.round(toPx(c, 0)[0]) + .5; line(p, x0, p, x0 + s); }
+  for (let c = ys; c <= ye; c++) if (mod10(c)) { const p = Math.round(toPx(0, c)[1]) + .5; line(x0, p, x0 + s, p); }
+  for (let c = xs; c <= xe; c++) if (!mod10(c)) { ctx.strokeStyle = c === 0 ? 'rgba(94,231,255,0.42)' : 'rgba(94,231,255,0.2)'; const p = Math.round(toPx(c, 0)[0]) + .5; line(p, x0, p, x0 + s); }
+  for (let c = ys; c <= ye; c++) if (!mod10(c)) { ctx.strokeStyle = c === 0 ? 'rgba(94,231,255,0.42)' : 'rgba(94,231,255,0.2)'; const p = Math.round(toPx(0, c)[1]) + .5; line(x0, p, x0 + s, p); }
+  ctx.restore();
+  // tick labels
+  ctx.fillStyle = '#d7e4f5'; ctx.font = `700 12px ${MONO}`;
+  ctx.textAlign = 'center';
+  for (let c = Math.ceil((CAM.x - 45) / 10) * 10; c <= CAM.x + 45; c += 10) ctx.fillText(mn(c), toPx(c, 0)[0], 22);
+  ctx.textAlign = 'right';
+  for (let c = Math.ceil((CAM.y - 45) / 10) * 10; c <= CAM.y + 45; c += 10) ctx.fillText(mn(c), 29, toPx(0, c)[1] + 4);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#ffc53d'; ctx.fillText('cm', 4, 22);
+  if (CAM.x === 0 && CAM.y === 0) {
+    ctx.fillStyle = 'rgba(94,231,255,0.85)'; ctx.font = `800 13px ${MONO}`;
+    ctx.fillText('+x', SIZE - MARGIN - 24, SIZE / 2 - 7); ctx.fillText('+y', SIZE / 2 + 7, MARGIN + 16);
+  }
+}
+// floating dust and a stray wrench (free fall!)
+const dust = Array.from({ length: 26 }, () => ({ x: rnd(-50, 50), y: rnd(-50, 50), vx: rnd(-.7, .7), vy: rnd(-.7, .7), r: rnd(.6, 1.6) }));
+const wrench = { x: -38, y: -34, vx: 0.45, vy: 0.22, a: 0, va: 0.3 };
+const wrapRel = (v, c) => ((((v - c) + 52) % 104) + 104) % 104 - 52 + c;
+function updDust(dt) {
+  for (const d of dust) { d.x += d.vx * dt; d.y += d.vy * dt; }
+  wrench.x += wrench.vx * dt; wrench.y += wrench.vy * dt; wrench.a += wrench.va * dt;
+}
+function drawDust() {
+  ctx.save(); bayClip();
+  ctx.fillStyle = 'rgba(200,225,255,0.4)';
+  for (const d of dust) { const [x, y] = toPx(wrapRel(d.x, CAM.x), wrapRel(d.y, CAM.y)); circ(x, y, d.r); ctx.fill(); }
+  const [wx, wy] = toPx(wrapRel(wrench.x, CAM.x), wrapRel(wrench.y, CAM.y));
+  ctx.translate(wx, wy); ctx.rotate(wrench.a); ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#9fb3c8'; rr(-14, -2.5, 24, 5, 2); ctx.fill();
+  circ(12, 0, 5.5); ctx.fill(); ctx.fillStyle = '#0e1a2c'; ctx.fillRect(12, -2.2, 7, 4.4);
+  ctx.restore();
+}
+function arrow(x1, y1, x2, y2, col, w = 3) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = Math.hypot(x2 - x1, y2 - y1), h = Math.min(13, L * 0.5);
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = w;
+  line(x1, y1, x2 - h * 0.6 * Math.cos(a), y2 - h * 0.6 * Math.sin(a));
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - h * Math.cos(a - 0.4), y2 - h * Math.sin(a - 0.4));
+  ctx.lineTo(x2 - h * Math.cos(a + 0.4), y2 - h * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill();
+}
+function label(txt, x, y, col = '#ffffff', align = 'left') {
+  ctx.font = `800 13px ${MONO}`; ctx.textAlign = align;
+  const wd = ctx.measureText(txt).width, ox = align === 'left' ? 0 : align === 'center' ? -wd / 2 : -wd;
+  ctx.fillStyle = 'rgba(2,5,9,0.9)'; ctx.strokeStyle = 'rgba(90,115,152,0.7)'; ctx.lineWidth = 1;
+  rr(x + ox - 5, y - 13, wd + 10, 18, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = col; ctx.fillText(txt, x, y);
+}
+
+function draw(now) {
+  const w = W(), k = currentKin(w), editing = !w.sim.snap, T = frameT(w);
+  CAM = (w.free && w.sim.snap && $('chkCam').checked) ? { x: T.pw.x - T.pb.x, y: T.pw.y - T.pb.y } : { x: 0, y: 0 };
+  drawHull(); drawFloor(); drawDust();
+  const [ax, ay] = toPx(T.pw.x, T.pw.y);
+  ctx.save(); bayClip();
+  // CM trail (free-float)
+  if (w.free && w.sim.trail.length > 1) {
+    ctx.strokeStyle = 'rgba(107,255,158,0.55)'; ctx.lineWidth = 2; ctx.setLineDash([2, 5]); ctx.beginPath();
+    w.sim.trail.forEach((p, i) => { const [x, y] = toPx(p.x, p.y); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // struts
+  ctx.strokeStyle = w.free ? 'rgba(159,179,200,0.3)' : 'rgba(159,179,200,0.45)'; ctx.lineWidth = 2;
+  for (const m of w.masses) { const [x, y] = toPx(...b2w(T, m.x, m.y)); line(ax, ay, x, y); }
+  if (w.force) { const [x, y] = toPx(...b2w(T, w.force.x, w.force.y)); ctx.setLineDash([2, 4]); line(ax, ay, x, y); ctx.setLineDash([]); }
+  if (!w.free) drawAxle(w, ax, ay, T.phi);
+  // vector overlays (sandbox)
+  if (mode === 'sandbox' && $('chkVec').checked && w.force) drawOverlays(w, T);
+  // masses
+  for (const m of w.masses) {
+    const [x, y] = toPx(...b2w(T, m.x, m.y)), r = massR(m.m);
+    const g = ctx.createRadialGradient(x - r * .35, y - r * .35, 1, x, y, r);
+    g.addColorStop(0, '#ffe7bd'); g.addColorStop(1, '#c46516');
+    ctx.fillStyle = g; circ(x, y, r); ctx.fill();
+    ctx.strokeStyle = '#2a1403'; ctx.lineWidth = 2; ctx.stroke();
+    if (m.locked) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; circ(x, y, r + 4); ctx.stroke(); ctx.setLineDash([]); }
+    if (w.sel && w.sel.type === 'mass' && w.sel.id === m.id) { ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 3; circ(x, y, r + 5); ctx.stroke(); }
+    ctx.fillStyle = '#1a0b00'; ctx.font = `800 12px ${MONO}`; ctx.textAlign = 'center';
+    ctx.fillText(String(+m.m.toFixed(2)), x, y + 4);
+    if (editing && mode === 'detective' && m.locked) label(`(${mn(m.x)}, ${mn(m.y)})`, x + r + 7, y - r);
+  }
+  if (w.free) drawCM(ax, ay, T.phi, w.masses.length > 0);
+  if (w.force) drawThruster(w, T, k.burning && w.sim.snap);
+  ctx.restore();
+  if (drag && drag.tip) label(drag.tip, drag.px + 16, drag.py - 14, '#5ee7ff');
+}
+function drawAxle(w, ax, ay, phi) {
+  ctx.fillStyle = '#1d2a3f'; ctx.strokeStyle = '#6a82a5'; ctx.lineWidth = 2; rr(ax - 20, ay - 20, 40, 40, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#a3b6cf'; for (const [bx, by] of [[-14, -14], [14, -14], [-14, 14], [14, 14]]) { circ(ax + bx, ay + by, 2.4); ctx.fill(); }
+  ctx.save(); ctx.translate(ax, ay); ctx.rotate(-phi);
+  ctx.fillStyle = '#2c4260'; ctx.strokeStyle = '#d0dcea'; ctx.lineWidth = 2; circ(0, 0, 11); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#ffc53d'; ctx.lineWidth = 3; line(0, 0, 11, 0);
+  ctx.restore();
+  ctx.fillStyle = '#ffffff'; circ(ax, ay, 2.5); ctx.fill();
+  if (w.sel && w.sel.type === 'axis') { ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 2.5; circ(ax, ay, 26); ctx.stroke(); }
+  if (mode === 'detective' && !w.axis.locked) { ctx.strokeStyle = 'rgba(94,231,255,0.8)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2; circ(ax, ay, 30); ctx.stroke(); ctx.setLineDash([]); label('AXLE: MOVABLE', ax + 30, ay + 38, '#5ee7ff'); }
+}
+function drawCM(x, y, phi, any) {
+  if (!any) return;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-phi);
+  const r = 9;
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#111' : '#f4f8ff'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * Math.PI / 2, (i + 1) * Math.PI / 2); ctx.closePath(); ctx.fill(); }
+  ctx.strokeStyle = '#6bff9e'; ctx.lineWidth = 2; circ(0, 0, r); ctx.stroke();
+  ctx.restore();
+  label('CM', x + 13, y - 11, '#6bff9e');
+}
+function drawThruster(w, T, burning) {
+  const f = w.force, [px, py] = toPx(...b2w(T, f.x, f.y));
+  const a = f.ang * DEG + T.phi, dx = Math.cos(a), dy = -Math.sin(a), sa = Math.atan2(dy, dx);
+  ctx.save(); ctx.translate(px, py); ctx.rotate(sa);
+  if (burning) {
+    const fl = (14 + f.F * 4) * (0.8 + 0.35 * Math.random());
+    const g = ctx.createLinearGradient(-20, 0, -20 - fl, 0);
+    g.addColorStop(0, '#fff3c4'); g.addColorStop(0.4, '#ffc53d'); g.addColorStop(1, 'rgba(255,90,30,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-20, -5); ctx.lineTo(-20 - fl, 0); ctx.lineTo(-20, 5); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#3a4d66'; ctx.strokeStyle = '#d0dcea'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-14, -4); ctx.lineTo(-21, -7); ctx.lineTo(-21, 7); ctx.lineTo(-14, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  rr(-15, -6, 15, 12, 3); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  const L = f.F * PXN, tx = px + dx * L, ty = py + dy * L;
+  arrow(px, py, tx, ty, f.locked ? '#ff8f6b' : '#ffc53d', 3.5);
+  ctx.fillStyle = '#ffffff'; circ(px, py, 3); ctx.fill();
+  const editing = !w.sim.snap;
+  if (editing && !f.locked) { ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 2.5; circ(tx, ty, 7); ctx.stroke(); }
+  if (w.sel && w.sel.type === 'force') { ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 2.5; circ(px, py, 13); ctx.stroke(); }
+  if (editing && mode === 'detective' && f.locked) label(`(${mn(f.x)}, ${mn(f.y)})  F = ${f.F.toFixed(1)} N, ${f.ang}°`, px + 12, py + 24, '#ffc53d');
+}
+function drawOverlays(w, T) {
+  const f = w.force, [ax, ay] = toPx(T.pw.x, T.pw.y), [px, py] = toPx(...b2w(T, f.x, f.y));
+  const a = f.ang * DEG + T.phi, dx = Math.cos(a), dy = -Math.sin(a);
+  if (w.free && !w.masses.length) return;
+  const rLen = Math.hypot(px - ax, py - ay); if (rLen < 2) return;
+  ctx.strokeStyle = 'rgba(255,197,61,0.4)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.2;
+  line(px - dx * 900, py - dy * 900, px + dx * 900, py + dy * 900);
+  ctx.setLineDash([]); arrow(ax, ay, px, py, 'rgba(94,231,255,0.95)', 2.5);
+  const t = (ax - px) * dx + (ay - py) * dy, fxp = px + dx * t, fyp = py + dy * t;
+  const lev = Math.hypot(ax - fxp, ay - fyp);
+  if (lev > 3) {
+    ctx.strokeStyle = '#6bff9e'; ctx.lineWidth = 2.5; line(ax, ay, fxp, fyp);
+    const ux = (ax - fxp) / lev, uy = (ay - fyp) / lev, s = 8, sd = t > 0 ? -1 : 1;
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(fxp + ux * s, fyp + uy * s); ctx.lineTo(fxp + ux * s + sd * dx * s, fyp + uy * s + sd * dy * s); ctx.lineTo(fxp + sd * dx * s, fyp + sd * dy * s); ctx.stroke();
+    label(`lever arm ${fx(lev / PX / 100, 3)} m`, (ax + fxp) / 2 + 10, (ay + fyp) / 2 - 8, '#6bff9e');
+  }
+  const ra = Math.atan2(py - ay, px - ax), fa = Math.atan2(dy, dx);
+  let d = fa - ra; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  ctx.strokeStyle = 'rgba(94,231,255,0.7)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; line(px, py, px + Math.cos(ra) * 42, py + Math.sin(ra) * 42); ctx.setLineDash([]);
+  ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 28, ra, fa, d < 0); ctx.stroke();
+  const p = physicsW(w);
+  label(`θ = ${fx(p.theta, 0)}°`, px + Math.cos(ra + d / 2) * 38, py + Math.sin(ra + d / 2) * 38 + 4, '#5ee7ff', 'center');
+  label(`r = ${fx(p.r, 3)} m`, (ax + px) / 2 + 8, (ay + py) / 2 + 18, '#5ee7ff');
+}
+
+// ================= interaction =================
+let drag = null;
+function evPx(e) { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) * SIZE / b.width, (e.clientY - b.top) * SIZE / b.height]; }
+function hitTest(w, px, py) {
+  if (w.force) {
+    const f = w.force, [fx0, fy0] = toPx(f.x, f.y), a = f.ang * DEG, L = f.F * PXN;
+    const tx = fx0 + Math.cos(a) * L, ty = fy0 - Math.sin(a) * L;
+    if (!f.locked && Math.hypot(px - tx, py - ty) < 11) return { kind: 'tip', sel: { type: 'force' } };
+    if (Math.hypot(px - fx0, py - fy0) < 13) return { kind: 'force', sel: { type: 'force' } };
+  }
+  for (let i = w.masses.length - 1; i >= 0; i--) {
+    const m = w.masses[i], [x, y] = toPx(m.x, m.y);
+    if (Math.hypot(px - x, py - y) < massR(m.m) + 4) return { kind: 'mass', id: m.id, sel: { type: 'mass', id: m.id } };
+  }
+  if (!w.free) { const [ax, ay] = toPx(w.axis.x, w.axis.y); if (Math.hypot(px - ax, py - ay) < 20) return { kind: 'axis', sel: { type: 'axis' } }; }
+  return null;
+}
+cv.addEventListener('pointerdown', e => {
+  const w = W();
+  if (w.sim.snap) { resetSim(w); CAM = { x: 0, y: 0 }; }
+  const [px, py] = evPx(e);
+  const h = hitTest(w, px, py);
+  w.sel = h ? h.sel : null;
+  if (h) {
+    const kind = h.kind === 'tip' ? 'force' : h.kind;
+    if (editable(w, kind, h.id)) {
+      const [cx, cy] = fromPx(px, py); let ox = 0, oy = 0;
+      if (h.kind === 'mass') { const m = w.masses.find(q => q.id === h.id); ox = m.x - cx; oy = m.y - cy; }
+      if (h.kind === 'force') { ox = w.force.x - cx; oy = w.force.y - cy; }
+      if (h.kind === 'axis') { ox = w.axis.x - cx; oy = w.axis.y - cy; }
+      drag = { kind: h.kind, id: h.id, ox, oy, px, py, tip: '' };
+      cv.setPointerCapture(e.pointerId);
+    }
+  }
+  renderSelect();
+});
+cv.addEventListener('pointermove', e => {
+  const w = W(), [px, py] = evPx(e);
+  if (!drag) { const h = w.sim.snap ? null : hitTest(w, px, py); cv.style.cursor = h ? (editable(w, h.kind === 'tip' ? 'force' : h.kind, h.id) ? 'grab' : 'pointer') : 'default'; return; }
+  drag.px = px; drag.py = py;
+  const [cx, cy] = fromPx(px, py);
+  const nx = clamp(Math.round(cx + drag.ox), -48, 48), ny = clamp(Math.round(cy + drag.oy), -48, 48);
+  if (drag.kind === 'mass') {
+    const m = w.masses.find(q => q.id === drag.id);
+    if (!w.masses.some(q => q !== m && q.x === nx && q.y === ny)) { m.x = nx; m.y = ny; }
+    const pv = w.free ? centreOfMass(w) : w.axis;
+    drag.tip = `(${mn(m.x)}, ${mn(m.y)}) cm` + (mode === 'sandbox' ? `  r = ${fmt(Math.hypot(m.x - pv.x, m.y - pv.y))} cm` : '');
+  } else if (drag.kind === 'axis') { w.axis.x = nx; w.axis.y = ny; drag.tip = `axle (${mn(nx)}, ${mn(ny)}) cm`; }
+  else if (drag.kind === 'force') { w.force.x = nx; w.force.y = ny; drag.tip = `thruster (${mn(nx)}, ${mn(ny)}) cm`; }
+  else if (drag.kind === 'tip') {
+    const f = w.force, [tx, ty] = toPx(f.x, f.y), vx = px - tx, vy = ty - py;
+    f.F = clamp(Math.round(Math.hypot(vx, vy) / PXN * 10) / 10, 0.1, FMAX);
+    f.ang = ((Math.round(Math.atan2(vy, vx) / DEG) % 360) + 360) % 360;
+    drag.tip = `F = ${f.F.toFixed(1)} N, ${f.ang}°`;
+  }
+  renderSelect();
+});
+cv.addEventListener('pointerup', () => { drag = null; renderSelect(); });
+cv.addEventListener('pointercancel', () => { drag = null; });
+
+document.addEventListener('keydown', e => {
+  const tg = e.target.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA') return;
+  const w = W(), s = w.sel; if (!s) return;
+  const d = e.shiftKey ? 10 : 1;
+  const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, d], ArrowDown: [0, -d] }[e.key];
+  if (mv) {
+    let obj = null;
+    if (s.type === 'mass' && editable(w, 'mass', s.id)) obj = w.masses.find(q => q.id === s.id);
+    if (s.type === 'axis' && editable(w, 'axis')) obj = w.axis;
+    if (s.type === 'force' && editable(w, 'force')) obj = w.force;
+    if (obj) { resetSim(w); obj.x = clamp(obj.x + mv[0], -48, 48); obj.y = clamp(obj.y + mv[1], -48, 48); renderSelect(); e.preventDefault(); }
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && s.type === 'mass' && editable(w, 'mass', s.id)) {
+    w.masses = w.masses.filter(q => q.id !== s.id); w.sel = null; resetSim(w); renderSelect(); renderPalette(); e.preventDefault();
+  }
+});
+
+// ================= selection panel =================
+function numIn(id, val, step, dis) { return `<input id="${id}" type="number" step="${step}" value="${val}" ${dis ? 'disabled' : ''}>`; }
+function renderSelect() {
+  const w = W(), s = w.sel, el = $('selBody');
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#selBody')) return;
+  if (s && s.type === 'axis' && w.free) w.sel = null;
+  if (!w.sel) { el.innerHTML = `<p class="hint">Click a mass${w.free ? '' : ', the axle'} or the thruster to select it. Drag to move it; drag the ring at the arrow tip to aim the thruster and set its size. Arrow keys nudge 1 cm (Shift: 10 cm). Delete removes a mass.</p>`; return; }
+  let h = '';
+  if (s.type === 'mass') {
+    const m = w.masses.find(q => q.id === s.id); if (!m) { w.sel = null; return renderSelect(); }
+    const ed = !m.locked;
+    h += `<div class="row"><label>Mass</label>${mode === 'sandbox' ? numIn('sM', m.m, 0.1, false) : `<span class="ro-val">${m.m.toFixed(1)}</span>`}<span class="u">kg</span></div>`;
+    h += `<div class="row"><label>Position</label><span class="u">x</span>${numIn('sX', m.x, 1, !ed)}<span class="u">y</span>${numIn('sY', m.y, 1, !ed)}<span class="u">cm</span></div>`;
+    if (mode === 'sandbox') { const pv = w.free ? centreOfMass(w) : w.axis, r = Math.hypot(m.x - pv.x, m.y - pv.y) / 100; h += `<div class="row"><label>r from ${w.free ? 'CM' : 'axle'}</label><span class="ro-val">${fmt(r)} m</span><span class="u">→ m r² =</span><span class="ro-val">${fmt(m.m * r * r)}</span><span class="u">kg·m²</span></div>`; }
+    if (ed) h += `<div class="row"><button class="btn small" id="sDel">Remove mass</button></div>`; else h += `<p class="hint">Bolted in place for this puzzle.</p>`;
+  } else if (s.type === 'axis') {
+    const ed = !w.axis.locked;
+    h += `<div class="row"><label>Axle</label><span class="u">x</span>${numIn('sX', w.axis.x, 1, !ed)}<span class="u">y</span>${numIn('sY', w.axis.y, 1, !ed)}<span class="u">cm</span></div>`;
+    if (!ed) h += `<p class="hint">The axle is fixed for this puzzle.</p>`;
+  } else if (s.type === 'force') {
+    const f = w.force; if (!f) { w.sel = null; return renderSelect(); }
+    const ed = !f.locked;
+    h += `<div class="row"><label>Thruster</label><span class="u">x</span>${numIn('sX', f.x, 1, !ed)}<span class="u">y</span>${numIn('sY', f.y, 1, !ed)}<span class="u">cm</span></div>`;
+    h += `<div class="row"><label>Thrust F</label>${numIn('sF', f.F.toFixed(1), 0.1, !ed)}<span class="u">N</span></div>`;
+    h += `<div class="row"><label>Direction</label>${numIn('sA', f.ang, 1, !ed)}<span class="u">° anticlockwise from +x</span></div>`;
+    if (!ed) h += `<p class="hint">This thruster is fixed for this puzzle.</p>`;
+  }
+  el.innerHTML = h;
+  const on = (id, fn) => { const n = $(id); if (n) n.addEventListener('change', () => { resetSim(w); fn(parseNum(n.value)); n.blur(); renderSelect(); renderPalette(); }); };
+  const target = s.type === 'mass' ? w.masses.find(q => q.id === s.id) : s.type === 'axis' ? w.axis : w.force;
+  on('sM', v => { if (isFinite(v)) target.m = clamp(Math.round(v * 10) / 10, 0.1, 10); });
+  on('sX', v => { if (isFinite(v)) target.x = clamp(Math.round(v), -48, 48); });
+  on('sY', v => { if (isFinite(v)) target.y = clamp(Math.round(v), -48, 48); });
+  on('sF', v => { if (isFinite(v)) target.F = clamp(Math.round(v * 10) / 10, 0.1, FMAX); });
+  on('sA', v => { if (isFinite(v)) target.ang = ((Math.round(v) % 360) + 360) % 360; });
+  const del = $('sDel'); if (del) del.onclick = () => { w.masses = w.masses.filter(q => q.id !== s.id); w.sel = null; resetSim(w); renderSelect(); renderPalette(); };
+}
+
+// ================= sandbox =================
+function initSandbox() {
+  const w = worlds.sandbox;
+  w.masses = [{ id: nextId++, m: 1, x: 20, y: 0 }, { id: nextId++, m: 1, x: -20, y: 0 }];
+  w.force = { x: 0, y: -30, F: 2.0, ang: 0, locked: false };
+}
+$('btnAddMass').onclick = () => {
+  const w = worlds.sandbox, m = clamp(Math.round((parseNum($('newMass').value) || 1) * 10) / 10, 0.1, 10), p = freeSpot(w);
+  resetSim(w); const id = nextId++; w.masses.push({ id, m, x: p.x, y: p.y }); w.sel = { type: 'mass', id }; renderSelect();
+};
+$('btnClear').onclick = () => { const w = worlds.sandbox; resetSim(w); w.masses = []; w.sel = null; renderSelect(); };
+function toggleThruster() {
+  const w = W(); resetSim(w);
+  if (w.force && !w.force.locked) { w.force = null; w.sel = null; }
+  else if (!w.force) { const p = freeSpot(w); w.force = { x: p.x, y: p.y, F: 2.0, ang: 90, locked: false }; w.sel = { type: 'force' }; }
+  renderSelect(); renderPalette();
+}
+$('btnThrusterSb').onclick = toggleThruster;
+$('btnThrusterDt').onclick = toggleThruster;
+$('sbBurn').addEventListener('change', () => { const w = worlds.sandbox; w.burn = clamp(Math.round((parseNum($('sbBurn').value) || 2) * 10) / 10, 0.1, 60); $('sbBurn').value = w.burn.toFixed(1); resetSim(w); });
+$('chkCont').addEventListener('change', () => { const w = worlds.sandbox; w.continuous = $('chkCont').checked; $('sbBurn').disabled = w.continuous; resetSim(w); });
+function setFree(on) {
+  const w = worlds.sandbox; resetSim(w); w.free = on;
+  $('segBolt').classList.toggle('on', !on); $('segFree').classList.toggle('on', on); $('camRow').hidden = !on;
+  if (w.sel && w.sel.type === 'axis') w.sel = null;
+  setCaption(); renderSelect(); renderReadouts();
+}
+$('segBolt').onclick = () => setFree(false);
+$('segFree').onclick = () => setFree(true);
+function setCaption() {
+  const free = mode === 'sandbox' && worlds.sandbox.free;
+  $('caption').innerHTML = free
+    ? `<b>FREE-FLOATING:</b> the axle is removed. In free fall nothing holds the system, so it spins about its <b>centre of mass</b> (CM) while the thrust also pushes the CM along with a = F/M. The dotted green line traces the CM's path. Masses in kg; grid in cm.`
+    : `<b>FREE FALL:</b> the station and everything aboard fall around Earth together, so nothing here has weight and gravity plays no part. The axle is bolted to the station frame. <b>Anticlockwise is positive.</b> Masses in kg. Grid: 1 cm squares, bold lines every 10 cm, positions from the bay centre.`;
+}
+
+const tile = (l, v, u = '', c = '') => `<div class="tile ${c}"><div class="tl">${l}</div><div class="tv">${v}<span class="tu">${u}</span></div></div>`;
+function renderReadouts() {
+  const w = worlds.sandbox, p = physicsW(w), k = currentKin(w), free = w.free;
+  $('btnThrusterSb').textContent = w.force ? '− Remove thruster' : '+ Add thruster';
+  let h = `<table class="ro"><tr><th>#</th><th>m (kg)</th><th>r from ${free ? 'CM' : 'axle'} (m)</th><th>m r²</th></tr>`;
+  p.rows.forEach((r, i) => { const sel = w.sel && w.sel.type === 'mass' && w.sel.id === r.id; h += `<tr class="${sel ? 'sel' : ''}"><td>${i + 1}</td><td>${fmt(r.m)}</td><td>${fx(r.r, 3)}</td><td>${fmt(r.mr2)}</td></tr>`; });
+  h += `<tr class="tot"><td colspan="3">I${free ? '<sub>CM</sub>' : ''} = Σ m r² (kg·m²)</td><td>${fmt(p.I)}</td></tr></table>`;
+  const burn = w.continuous ? Infinity : w.burn, I = p.I, om = k.omega;
+  if (free) {
+    h += `<div class="grp">Centre of mass</div><div class="tiles">`;
+    h += tile('Total mass M', fmt(p.M), 'kg');
+    h += tile('CM position', `(${fx(p.cm.x, 1)}, ${fx(p.cm.y, 1)})`, 'cm');
+    h += `</div>`;
+  }
+  h += `<div class="grp">Torque ${free ? 'about the CM' : 'about the axle'}</div><div class="tiles">`;
+  if (w.force) {
+    h += tile(`r (${free ? 'CM' : 'axle'} → thruster)`, fx(p.r, 3), 'm');
+    h += tile('F', p.F.toFixed(1), 'N');
+    h += tile('θ (from r to F)', fx(p.theta, 1), '°');
+    h += tile('τ = rF sin θ', fmt(p.tau), 'N·m', 'amber');
+    h += tile('α = τ / I', fmt(p.alpha), 'rad/s²', 'amber');
+    h += tile('Burn time Δt', isFinite(burn) ? burn.toFixed(1) : '∞', 's');
+    if (isFinite(burn)) h += tile('Angular impulse τΔt', fmt(p.tau * burn), 'N·m·s', 'amber wide');
+    if (free) h += tile('CM acceleration a = F/M', fmt(p.acm), 'm/s²', 'green wide');
+  } else h += tile('No thruster mounted', '0', 'N·m', 'wide');
+  h += `</div>`;
+  const state = !w.sim.snap ? 'at rest' : k.burning ? 'burning' : 'coasting';
+  h += `<div class="grp">Live · ${state}</div><div class="tiles">`;
+  h += tile('Time t', w.sim.t.toFixed(2), 's');
+  h += tile('ω', fmt(om), 'rad/s', 'green');
+  h += tile(`L = Iω${free ? ' (about CM)' : ''}`, fmt(I * om), 'kg·m²/s', 'green');
+  h += tile('Rotational Eₖ = ½Iω²', fmt(0.5 * I * om * om), 'J', 'green');
+  if (free) {
+    const v = w.sim.v ? Math.hypot(w.sim.v.x, w.sim.v.y) : 0;
+    h += tile('CM speed v', fmt(v), 'm/s', 'green');
+    h += tile('Translational Eₖ = ½Mv²', fmt(0.5 * p.M * v * v), 'J', 'green');
+  }
+  h += tile('Angle turned', `${fmt(k.phi)} rad · ${fmt(k.phi / (2 * Math.PI))}`, 'rev', 'wide');
+  h += `</div>`;
+  $('readouts').innerHTML = h;
+}
+const gcv = $('graph'), gctx = gcv.getContext('2d');
+function drawGraph() {
+  const d = window.devicePixelRatio || 1, Wd = gcv.clientWidth || 360, Hd = 160;
+  if (gcv.width !== Wd * d) { gcv.width = Wd * d; gcv.height = Hd * d; }
+  gctx.setTransform(d, 0, 0, d, 0, 0); gctx.clearRect(0, 0, Wd, Hd);
+  const w = worlds.sandbox, hs = w.hist, L = 44, B = Hd - 24, T = 12, R = Wd - 10;
+  const tMax = Math.max(5, ...hs.map(p => p.t)); const wMax = Math.max(1, ...hs.map(p => Math.abs(p.omega)));
+  const neg = hs.some(p => p.omega < -1e-9), pos = hs.some(p => p.omega > 1e-9);
+  const y0 = neg && !pos ? T : (neg && pos ? (T + B) / 2 : B);
+  const sy = (neg && pos ? (B - T) / 2 : (B - T)) / wMax;
+  if (w.sim.snap && isFinite(w.sim.burn)) { const xb = Math.min(R, L + (R - L) * w.sim.burn / tMax); gctx.fillStyle = 'rgba(255,197,61,0.1)'; gctx.fillRect(L, T, xb - L, B - T); gctx.fillStyle = '#ffc53d'; gctx.font = `800 11px ${MONO}`; gctx.textAlign = 'left'; gctx.fillText('BURN', L + 5, T + 13); }
+  gctx.strokeStyle = '#5a7398'; gctx.lineWidth = 1.5;
+  gctx.beginPath(); gctx.moveTo(L, T); gctx.lineTo(L, B); gctx.moveTo(L, y0); gctx.lineTo(R, y0); gctx.stroke();
+  gctx.fillStyle = '#d7e4f5'; gctx.font = `700 12px ${MONO}`; gctx.textAlign = 'right';
+  gctx.fillText('t (s)', R, B + 18); gctx.textAlign = 'center'; gctx.fillText('0', L, B + 18); gctx.fillText(tMax.toFixed(0), R - 40, B + 18);
+  gctx.textAlign = 'right'; gctx.fillText(fmt(neg && !pos ? -wMax : wMax, 2), L - 5, (neg && !pos ? B : T) + 5);
+  gctx.save(); gctx.translate(12, (T + B) / 2); gctx.rotate(-Math.PI / 2); gctx.textAlign = 'center'; gctx.fillText('ω (rad/s)', 0, 0); gctx.restore();
+  if (hs.length > 1) {
+    gctx.strokeStyle = '#6bff9e'; gctx.lineWidth = 2.5; gctx.shadowColor = '#6bff9e'; gctx.shadowBlur = 6; gctx.beginPath();
+    hs.forEach((p, i) => { const x = L + (R - L) * p.t / tMax, y = y0 - p.omega * sy; i ? gctx.lineTo(x, y) : gctx.moveTo(x, y); });
+    gctx.stroke(); gctx.shadowBlur = 0;
+  }
+}
+
+// ================= run controls =================
+let flashUntil = 0, flashMsg = '';
+function flash(msg) { flashMsg = msg; flashUntil = performance.now() + 2600; }
+$('btnFire').onclick = () => {
+  const w = W();
+  if (!w.force) return flash('NO THRUSTER MOUNTED');
+  if (w.sim.running) return;
+  if (!w.sim.snap) {
+    const p = physicsW(w);
+    if (w.free) { if (w.masses.length < 2 || !(p.I > 1e-6)) return flash('FREE FLOAT NEEDS 2+ SEPARATED MASSES'); }
+    else if (!(p.I > 0)) return flash('ADD SOME MASS FIRST');
+    w.sim.snap = p; w.sim.t = 0;
+    if (mode === 'sandbox') w.sim.burn = w.continuous ? Infinity : w.burn;
+    else { const pz = game.puzzle; w.sim.burn = pz && (pz.needs.burn || pz.fixedBurn) ? w.burn : 3; }
+    w.hist = [{ t: 0, omega: 0 }];
+    if (w.free) { w.sim.pos = { x: p.cm.x, y: p.cm.y }; w.sim.v = { x: 0, y: 0 }; w.sim.trail = [{ x: p.cm.x, y: p.cm.y }]; }
+  }
+  w.sim.running = true;
+};
+$('btnPause').onclick = () => { const w = W(); if (w.sim.snap) w.sim.running = !w.sim.running; };
+$('btnReset').onclick = () => { resetSim(W()); renderSelect(); };
+function hud() {
+  const w = W(), k = currentKin(w), st = $('hudStatus');
+  let s = !w.sim.snap ? 'READY · EDIT MODE' : w.sim.running ? (k.burning ? 'THRUSTER BURNING' : (w.free ? 'THRUSTER OFF · DRIFTING' : 'THRUSTER OFF · COASTING')) : 'PAUSED';
+  if (performance.now() < flashUntil) s = flashMsg;
+  $('hudText').textContent = s; st.className = (w.sim.running && k.burning) ? 'burn' : '';
+  $('hudTime').textContent = `t = ${w.sim.t.toFixed(2)} s`;
+  $('btnPause').textContent = w.sim.snap && !w.sim.running ? '▶ Resume' : '❚❚ Pause';
+}
+
+// ================= detective: solution step builders =================
+const sec = (t, h) => `<div class="solsec"><h4>${t}</h4>${h}</div>`;
+const stp = (k, v) => `<div class="st"><b>${k}</b> ${v}</div>`;
+const note = t => `<div class="note">${t}</div>`;
+const pv = v => `(${fmt(v, 4)})`;
+function stepsI(ms, axis) {
+  let I = 0; const subs = [], vals = [];
+  const off = axis.x !== 0 || axis.y !== 0;
+  let h = stp('Equation:', 'I = Σ m r², where r² = (x − x<sub>axle</sub>)² + (y − y<sub>axle</sub>)²');
+  ms.forEach((m, i) => {
+    const dx = (m.x - axis.x) / 100, dy = (m.y - axis.y) / 100, r2 = dx * dx + dy * dy, t = m.m * r2; I += t;
+    const pre = off ? `(${fx(m.x / 100, 2)} − ${pv(axis.x / 100)})² + (${fx(m.y / 100, 2)} − ${pv(axis.y / 100)})² = ` : '';
+    h += `<div class="st">m<sub>${i + 1}</sub> = ${m.m.toFixed(1)} kg at (${fx(m.x / 100, 2)}, ${fx(m.y / 100, 2)}) m: r<sub>${i + 1}</sub>² = ${pre}(${fx(dx, 2)})² + (${fx(dy, 2)})² = ${fx(dx * dx, 4)} + ${fx(dy * dy, 4)} = ${fx(r2, 4)} m²</div>`;
+    subs.push(`(${m.m.toFixed(1)})(${fx(r2, 4)})`); vals.push(fmt(t, 4));
+  });
+  h += stp('Substitute:', `I = ${subs.join(' + ')}`);
+  h += stp('Evaluate:', `I = ${vals.join(' + ')} = <b>${fmt(I)} kg·m²</b>`);
+  return { html: sec('Moment of inertia', h), I };
+}
+function stepsTau(f, axis) {
+  const rx = (f.x - axis.x) / 100, ry = (f.y - axis.y) / 100, r = Math.hypot(rx, ry);
+  const phr = Math.atan2(ry, rx) / DEG, raw = f.ang - phr, th = normDeg(raw), s = Math.sin(th * DEG), tau = r * f.F * s;
+  let h = `<div class="st">Thruster position relative to the axle: r<sub>x</sub> = ${fx(rx, 2)} m, r<sub>y</sub> = ${fx(ry, 2)} m</div>`;
+  h += `<div class="st">r = √(r<sub>x</sub>² + r<sub>y</sub>²) = √((${fx(rx, 2)})² + (${fx(ry, 2)})²) = ${fmt(r, 4)} m</div>`;
+  h += `<div class="st">Direction of r: φ<sub>r</sub> = ${fx(phr, 1)}° (anticlockwise from +x). Force direction θ<sub>F</sub> = ${f.ang}°.</div>`;
+  h += `<div class="st">Angle from r to F: θ = θ<sub>F</sub> − φ<sub>r</sub> = ${f.ang}° − (${fx(phr, 1)}°) = ${fx(raw, 1)}°${Math.abs(raw - th) > 0.05 ? ` → ${fx(th, 1)}° (same direction, written between −180° and 180°)` : ''}</div>`;
+  h += stp('Equation:', 'τ = rF sin θ (anticlockwise positive)');
+  h += stp('Substitute:', `τ = (${fmt(r, 4)})(${f.F.toFixed(1)}) sin(${fx(th, 1)}°)`);
+  h += stp('Evaluate:', `τ = (${fmt(r, 4)})(${f.F.toFixed(1)})(${fmt(s, 4)}) = <b>${fmt(tau)} N·m</b> ${dirWord(tau)}`);
+  return { html: sec('Torque', h), tau };
+}
+function stepsAlpha(tau, I) {
+  const a = tau / I;
+  return { html: sec('Angular acceleration', stp('Equation:', 'τ = Iα') + stp('Rearrange:', 'α = τ / I') + stp('Substitute:', `α = ${pv(tau)} / ${pv(I)}`) + stp('Evaluate:', `α = <b>${fmt(a)} rad/s²</b>`)), alpha: a };
+}
+function stepsReqTau(I, a) {
+  const t = I * a;
+  return { html: sec('Torque needed', stp('Equation:', 'τ = Iα') + stp('Substitute:', `τ = ${pv(I)}${pv(a)}`) + stp('Evaluate:', `τ = <b>${fmt(t)} N·m</b>`)), tau: t };
+}
+function stepsReqI(tau, a) {
+  const I = tau / a;
+  return { html: sec('Moment of inertia needed', stp('Equation:', 'τ = Iα') + stp('Rearrange:', 'I = τ / α') + stp('Substitute:', `I = ${pv(tau)} / ${pv(a)}`) + stp('Evaluate:', `I = <b>${fmt(I)} kg·m²</b>`)), I };
+}
+function stepsOmega(a, dt) {
+  const w = a * dt;
+  return { html: sec('Angular velocity after the burn', stp('Equation:', 'ω = ω₀ + αΔt, with ω₀ = 0 (starts at rest)') + stp('Substitute:', `ω = 0 + ${pv(a)}(${dt.toFixed(1)})`) + stp('Evaluate:', `ω = <b>${fmt(w)} rad/s</b>`)), omega: w };
+}
+function stepsReqAlpha(om, dt) {
+  const a = om / dt;
+  return { html: sec('Angular acceleration needed', stp('Equation:', 'ω = ω₀ + αΔt, with ω₀ = 0') + stp('Rearrange:', 'α = ω / Δt') + stp('Substitute:', `α = ${pv(om)} / (${dt.toFixed(1)})`) + stp('Evaluate:', `α = <b>${fmt(a)} rad/s²</b>`)), alpha: a };
+}
+function stepsKE(I, om) {
+  const K = 0.5 * I * om * om;
+  return { html: sec('Rotational kinetic energy', stp('Equation:', 'E<sub>k</sub> = ½Iω²') + stp('Substitute:', `E<sub>k</sub> = ½${pv(I)}${pv(om)}²`) + stp('Evaluate:', `E<sub>k</sub> = <b>${fmt(K)} J</b>`)), K };
+}
+
+// ================= detective: generators =================
+function randPoint(taken, axis, rmin = 8, rmax = 40) {
+  for (let k = 0; k < 800; k++) {
+    const x = ri(-rmax, rmax), y = ri(-rmax, rmax), r = Math.hypot(x - axis.x, y - axis.y);
+    if (r < rmin || r > rmax || Math.abs(x) > 44 || Math.abs(y) > 44) continue;
+    if (taken.some(p => Math.hypot(p.x - x, p.y - y) < 9)) continue;
+    return { x, y };
+  }
+  return null;
+}
+const randMasses = n => Array.from({ length: n }, () => pick([0.5, 1, 2]));
+function hiddenMasses(list, axis, taken) {
+  const out = [];
+  for (const m of list) { const p = randPoint(taken, axis); if (!p) return null; taken.push(p); out.push({ m, x: p.x, y: p.y }); }
+  return out;
+}
+function hiddenForce(axis, taken) {
+  for (let k = 0; k < 300; k++) {
+    const p = randPoint(taken, axis, 10, 40); if (!p) continue;
+    const F = stepRand(0.5, 5, 0.1), ang = ri(0, 359), th = normDeg(ang - Math.atan2(p.y - axis.y, p.x - axis.x) / DEG);
+    if (Math.abs(Math.sin(th * DEG)) < 0.35) continue;
+    taken.push(p); return { x: p.x, y: p.y, F, ang };
+  }
+  return null;
+}
+const alphaOK = a => isFinite(a) && Math.abs(a) >= 0.2 && Math.abs(a) <= 12;
+const origin = () => ({ x: 0, y: 0 });
+function P(o) { return Object.assign({ palette: [], lockedMasses: [], axis: origin(), axisLocked: true, force: null, needs: { force: false, burn: false }, fixedBurn: null, answers: [] }, o); }
+
+function cmpRel(label, val, target) {
+  if (typeof val !== 'number' || isNaN(val)) return { label, ok: false, msg: 'enter a number' };
+  if (!isFinite(val)) return { label, ok: false, msg: 'cannot be evaluated yet (is there any mass?)' };
+  if (Math.abs(val) > 1e-12 && Math.sign(val) !== Math.sign(target)) return { label, ok: false, msg: 'wrong direction: check the sign (anticlockwise is positive)' };
+  const e = (val - target) / Math.abs(target);
+  if (Math.abs(e) <= 0.02) return { label, ok: true, msg: 'within 2% ✓' };
+  return { label, ok: false, msg: `too ${e > 0 ? 'high' : 'low'} by ${Math.max(1, Math.round(Math.abs(e * 100)))}%` };
+}
+function cmpExact(label, val, target, unit, d = 1) {
+  if (Math.abs(val - target) <= 0.049) return { label, ok: true, msg: `${target.toFixed(d)} ${unit} ✓` };
+  return { label, ok: false, msg: `must be exactly ${target.toFixed(d)} ${unit}` };
+}
+function paletteCheck(w) {
+  const need = game.puzzle.palette.length, placed = w.masses.filter(m => !m.locked).length;
+  return placed === need ? { label: 'Palette', ok: true, msg: 'all masses placed ✓' } : { label: 'Palette', ok: false, msg: `place all ${need} masses from the palette (${placed} placed)` };
+}
+const noForce = () => [{ label: 'Thruster', ok: false, msg: 'mount a thruster first (+ Add thruster)' }];
+
+function vBuildI() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(2), axis, taken); if (!ms) return null;
+  const S = stepsI(ms, axis), tI = round3(S.I);
+  return P({ kind: 'Build to spec', palette: ms.map(m => m.m),
+    prompt: `Use <b>all</b> the masses in the palette to build a system with <b>I = ${fmt(tI)} kg·m²</b> about the axle.`,
+    check: w => [paletteCheck(w), cmpRel('Moment of inertia I', physics(w).I, tI)],
+    solution: () => note('One possible arrangement (many others work):') + S.html });
+}
+function vCalcI() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(3), axis, taken); if (!ms) return null;
+  const S = stepsI(ms, axis);
+  return P({ kind: 'Survey the system', lockedMasses: ms, answers: [{ key: 'I', label: 'I', unit: 'kg·m²' }],
+    prompt: `These masses are bolted to the platform. Calculate the <b>moment of inertia</b> of the system about the axle.`,
+    check: (w, a) => [cmpRel('Your value of I', a.I, S.I)], solution: () => S.html });
+}
+function vCalcTorque() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(2), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), SA = stepsAlpha(ST.tau, SI.I); if (!alphaOK(SA.alpha)) return null;
+  return P({ kind: 'Read the thruster', lockedMasses: ms, force: f,
+    answers: [{ key: 'tau', label: 'τ', unit: 'N·m' }, { key: 'alpha', label: 'α', unit: 'rad/s²' }],
+    prompt: `A thruster is mounted and the masses are bolted down. Calculate the <b>torque</b> about the axle and the <b>angular acceleration</b> it produces. Anticlockwise is positive.`,
+    check: (w, a) => [cmpRel('Torque τ', a.tau, ST.tau), cmpRel('Angular acceleration α', a.alpha, SA.alpha)],
+    solution: () => ST.html + SI.html + SA.html });
+}
+function vHitAlpha() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(2), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), a = ST.tau / SI.I; if (!alphaOK(a)) return null;
+  const ta = round3(a), SR = stepsReqTau(SI.I, ta);
+  return P({ kind: 'Set the spin-up', lockedMasses: ms, needs: { force: true, burn: false },
+    prompt: `Mount a thruster anywhere on the platform so that the system's angular acceleration is <b>α = ${fmt(ta)} rad/s²</b> ${dirWord(ta)}.`,
+    check: w => w.force ? [cmpRel('Angular acceleration α', physics(w).alpha, ta)] : noForce(),
+    solution: () => SI.html + SR.html + note('One thruster setting that gives this torque:') + ST.html });
+}
+function vExactF() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(2), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const ST = stepsTau(f, axis), tt = round3(ST.tau), arm = Math.abs(tt / f.F);
+  return P({ kind: 'Torque on demand', lockedMasses: ms, needs: { force: true, burn: false },
+    prompt: `Mount a thruster with a thrust of exactly <b>F = ${f.F.toFixed(1)} N</b> so that the torque about the axle is <b>τ = ${fmt(tt)} N·m</b> ${dirWord(tt)}.`,
+    check: w => w.force ? [cmpExact('Thrust F', w.force.F, f.F, 'N'), cmpRel('Torque τ', physics(w).tau, tt)] : noForce(),
+    solution: () => sec('Lever arm needed', stp('Equation:', 'τ = rF sin θ') + stp('Rearrange:', 'r sin θ = τ / F') + stp('Substitute:', `r sin θ = ${pv(Math.abs(tt))} / (${f.F.toFixed(1)})`) + stp('Evaluate:', `r sin θ = <b>${fmt(arm)} m</b>`) + `<div class="st">Any thruster whose line of action passes ${fmt(arm)} m from the axle works, as long as it pushes ${tt > 0 ? 'anticlockwise' : 'clockwise'}.</div>`) + note('For example:') + ST.html });
+}
+function vBuildIalpha() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(pick([2, 3])), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), SA = stepsAlpha(ST.tau, SI.I); if (!alphaOK(SA.alpha)) return null;
+  const tI = round3(SI.I), ta = round3(SA.alpha);
+  return P({ kind: 'Build and drive', palette: ms.map(m => m.m), needs: { force: true, burn: false },
+    prompt: `Use <b>all</b> the palette masses to build a system with <b>I = ${fmt(tI)} kg·m²</b>, then mount a thruster so that <b>α = ${fmt(ta)} rad/s²</b> ${dirWord(ta)}.`,
+    check: w => { const p = physics(w); return [paletteCheck(w), cmpRel('Moment of inertia I', p.I, tI), ...(w.force ? [cmpRel('Angular acceleration α', p.alpha, ta)] : noForce())]; },
+    solution: () => note('One possible solution (many others work):') + SI.html + ST.html + SA.html });
+}
+function vBuildIExactF() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(pick([2, 3])), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), SA = stepsAlpha(ST.tau, SI.I); if (!alphaOK(SA.alpha)) return null;
+  const tI = round3(SI.I), ta = round3(SA.alpha);
+  return P({ kind: 'Fixed thrust', palette: ms.map(m => m.m), needs: { force: true, burn: false },
+    prompt: `Use <b>all</b> the palette masses to build a system with <b>I = ${fmt(tI)} kg·m²</b>. Then, using a thrust of exactly <b>F = ${f.F.toFixed(1)} N</b>, produce <b>α = ${fmt(ta)} rad/s²</b> ${dirWord(ta)}.`,
+    check: w => { const p = physics(w); return [paletteCheck(w), cmpRel('Moment of inertia I', p.I, tI), ...(w.force ? [cmpExact('Thrust F', w.force.F, f.F, 'N'), cmpRel('Angular acceleration α', p.alpha, ta)] : noForce())]; },
+    solution: () => note('One possible solution (many others work):') + SI.html + stepsReqTau(SI.I, ta).html + note('A thruster setting with F = ' + f.F.toFixed(1) + ' N that gives this torque:') + ST.html });
+}
+function vPlaceForAlpha() {
+  const axis = origin(), taken = [axis], f = hiddenForce(axis, taken); if (!f) return null;
+  const ms = hiddenMasses(randMasses(pick([2, 3])), axis, taken); if (!ms) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), a = ST.tau / SI.I; if (!alphaOK(a)) return null;
+  const ta = round3(a);
+  return P({ kind: 'Fixed thruster', palette: ms.map(m => m.m), force: f,
+    prompt: `The thruster is fixed in place. Arrange <b>all</b> the palette masses so that the system's angular acceleration is <b>α = ${fmt(ta)} rad/s²</b>.`,
+    check: w => [paletteCheck(w), cmpRel('Angular acceleration α', physics(w).alpha, ta)],
+    solution: () => ST.html + stepsReqI(ST.tau, ta).html + note('One arrangement with this moment of inertia:') + SI.html });
+}
+function vMoveAxis() {
+  const taken = [origin()], ms = hiddenMasses(randMasses(3), origin(), taken); if (!ms) return null;
+  const ax = randPoint(taken, origin(), 10, 25); if (!ax) return null;
+  const S = stepsI(ms, ax), I0 = physics({ masses: ms, axis: origin() }).I;
+  if (Math.abs(S.I - I0) / S.I < 0.15) return null;
+  const tI = round3(S.I);
+  return P({ kind: 'Relocate the axle', lockedMasses: ms, axisLocked: false,
+    prompt: `The masses are bolted down, but the axle can be moved. Move the axle so that the system's moment of inertia is <b>I = ${fmt(tI)} kg·m²</b>.`,
+    check: w => [cmpRel('Moment of inertia I', physics(w).I, tI)],
+    solution: () => note(`One possible axle position: (${mn(ax.x)}, ${mn(ax.y)}) cm. Other positions also work.`) + S.html });
+}
+function vImpulseL() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(2), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const dt = stepRand(1, 5, 0.5), ST = stepsTau(f, axis), L = ST.tau * dt; if (Math.abs(L) < 0.05) return null;
+  const tL = round3(L);
+  return P({ kind: 'Angular impulse', lockedMasses: ms, needs: { force: true, burn: true },
+    prompt: `Using a thrust of exactly <b>F = ${f.F.toFixed(1)} N</b>, give the system an angular momentum of <b>L = ${fmt(tL)} kg·m²/s</b> ${dirWord(tL)}. You choose where to mount the thruster, which way it points, and how long it burns.`,
+    check: w => w.force ? [cmpExact('Thrust F', w.force.F, f.F, 'N'), cmpRel('Angular momentum L', physics(w).tau * w.burn, tL)] : noForce(),
+    solution: () => sec('Angular impulse', stp('Equation:', 'τΔt = ΔL = L − 0 (starts at rest)') + stp('Rearrange:', 'Δt = L / τ') + `<div class="st">Notice that I never appears: the angular impulse alone sets L.</div>`) + note('For example, this thruster:') + ST.html + sec('Burn time', stp('Substitute:', `Δt = ${pv(tL)} / ${pv(ST.tau)}`) + stp('Evaluate:', `Δt = <b>${fmt(tL / ST.tau)} s</b>`)) });
+}
+function vOmegaAfterBurn() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(pick([2, 3])), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), SA = stepsAlpha(ST.tau, SI.I); if (!alphaOK(SA.alpha)) return null;
+  const dt = stepRand(1, 4, 0.5), SW = stepsOmega(SA.alpha, dt), tI = round3(SI.I), tw = round3(SW.omega);
+  return P({ kind: 'Burn and coast', palette: ms.map(m => m.m), needs: { force: true, burn: true },
+    prompt: `Use <b>all</b> the palette masses to build a system with <b>I = ${fmt(tI)} kg·m²</b>. Then mount a thruster and fire a burn of exactly <b>Δt = ${dt.toFixed(1)} s</b> so that the system coasts at <b>ω = ${fmt(tw)} rad/s</b> ${dirWord(tw)}.`,
+    check: w => { const p = physics(w); return [paletteCheck(w), cmpRel('Moment of inertia I', p.I, tI), ...(w.force ? [cmpExact('Burn time Δt', w.burn, dt, 's'), cmpRel('Final ω', p.alpha * w.burn, tw)] : noForce())]; },
+    solution: () => note('One possible solution (many others work):') + SI.html + ST.html + SA.html + SW.html });
+}
+function vKE() {
+  const axis = origin(), taken = [axis], ms = hiddenMasses(randMasses(3), axis, taken); if (!ms) return null;
+  const f = hiddenForce(axis, taken); if (!f) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), SA = stepsAlpha(ST.tau, SI.I); if (!alphaOK(SA.alpha)) return null;
+  const dt = stepRand(1, 4, 0.5), SW = stepsOmega(SA.alpha, dt), SK = stepsKE(SI.I, SW.omega);
+  if (SK.K < 0.01 || SK.K > 50) return null;
+  const tK = round3(SK.K);
+  return P({ kind: 'Energy budget', lockedMasses: ms, needs: { force: true, burn: true },
+    prompt: `Mount a thruster and fire a burn of exactly <b>Δt = ${dt.toFixed(1)} s</b> so that the system finishes with rotational kinetic energy <b>E<sub>k</sub> = ${fmt(tK)} J</b>. Either direction of spin is fine.`,
+    check: w => { if (!w.force) return noForce(); const p = physics(w), om = p.alpha * w.burn; return [cmpExact('Burn time Δt', w.burn, dt, 's'), cmpRel('Rotational Eₖ', 0.5 * p.I * om * om, tK)]; },
+    solution: () => SI.html + note('One thruster setting that works:') + ST.html + SA.html + SW.html + SK.html });
+}
+function vPlaceForOmega() {
+  const axis = origin(), taken = [axis], f = hiddenForce(axis, taken); if (!f) return null;
+  const ms = hiddenMasses(randMasses(pick([2, 3])), axis, taken); if (!ms) return null;
+  const SI = stepsI(ms, axis), ST = stepsTau(f, axis), a = ST.tau / SI.I; if (!alphaOK(a)) return null;
+  const dt = stepRand(1, 4, 0.5), tw = round3(a * dt);
+  return P({ kind: 'Tune the payload', palette: ms.map(m => m.m), force: f, fixedBurn: dt,
+    prompt: `The thruster is fixed and its burn timer is locked at <b>Δt = ${dt.toFixed(1)} s</b>. Arrange <b>all</b> the palette masses so that the system coasts at <b>ω = ${fmt(tw)} rad/s</b> after the burn.`,
+    check: w => [paletteCheck(w), cmpRel('Final ω', physics(w).alpha * dt, tw)],
+    solution: () => { const SR = stepsReqAlpha(tw, dt); return ST.html + SR.html + stepsReqI(ST.tau, SR.alpha).html + note('One arrangement with this moment of inertia:') + SI.html; } });
+}
+const VARIANTS = { 1: [vBuildI, vCalcI], 2: [vCalcTorque, vHitAlpha, vExactF], 3: [vBuildIalpha, vBuildIExactF], 4: [vPlaceForAlpha, vMoveAxis, vImpulseL], 5: [vOmegaAfterBurn, vKE, vPlaceForOmega] };
+const LEVEL_NAMES = ['', 'Rotational inertia', 'Torque', 'Build and drive', 'Reverse engineering', 'Burn and coast'];
+const SYSTEMS = [null,
+  { name: 'Gyro stabiliser', topic: 'moment of inertia',
+    story: ['The gyro stabiliser lost its balance masses in the impact. The flight computer can\'t steady the station until the stabiliser\'s moment of inertia is exactly right.',
+            'Sensors on the gyro stabiliser are fried. The flight computer needs its moment of inertia worked out by hand before it can steady the station.'] },
+  { name: 'Attitude thrusters', topic: 'torque',
+    story: ['A module is starting to tumble. Its attitude thruster has to deliver exactly the right twist to bring it back under control.',
+            'The attitude-control computer has rebooted with no thruster data. Get the torque right, or the station keeps drifting off its heading.'] },
+  { name: 'Reaction wheel', topic: 'build and drive',
+    story: ['Debris shattered the reaction wheel. Rebuild it from spare masses and spin it up to the exact rate the guidance system expects.',
+            'The backup reaction wheel arrived as a box of parts. Assemble it to spec and drive it, or the station can\'t hold its orientation.'] },
+  { name: 'Solar array drive', topic: 'reverse engineering',
+    story: ['The solar array must track the Sun precisely, or the batteries run flat. Some parts of its drive are jammed in place; work around them.',
+            'Power is falling. The solar array drive is half-welded by the impact, so use what still moves to restore the rotation it needs.'] },
+  { name: 'Habitat centrifuge', topic: 'burn and coast',
+    story: ['Last one. The habitat centrifuge keeps the crew healthy, and it must coast at exactly the right spin after a single burn. Life support depends on it.',
+            'The centrifuge spun down during the blackout. One precise thruster burn has to bring it back to spec, then it coasts.'] }];
+function genPuzzle(level) {
+  for (let k = 0; k < 300; k++) { const p = pick(VARIANTS[level])(); if (p) { p.level = level; return p; } }
+  return vBuildI();
+}
+
+// ================= detective: game flow =================
+const game = { score: 0, level: 1, puzzle: null, misses: 0, solved: false, revealed: false, lastKind: null };
+function startGame(brief = true) {
+  game.score = 0; $('working').value = ''; newPuzzle();
+  if (brief) {
+    $('briefList').innerHTML = SYSTEMS.slice(1).map(s => `<li>${s.name} <span>(${s.topic})</span></li>`).join('');
+    $('briefOverlay').hidden = false;
+  }
+}
+$('btnBriefGo').onclick = () => { $('briefOverlay').hidden = true; };
+function renderSystems() {
+  const n = game.score, cur = game.solved ? 0 : game.level;
+  $('systems').innerHTML = SYSTEMS.slice(1).map((s, i) => {
+    const lv = i + 1, on = lv <= n, now = lv === cur && !on;
+    return `<li class="${now ? 'cur' : ''}"><span>${lv}. ${s.name}</span><span class="${on ? 'st-on' : now ? 'st-cur' : 'st-off'}">${on ? 'ONLINE' : now ? 'REPAIRING' : 'OFFLINE'}</span></li>`;
+  }).join('');
+  const off = 5 - n, bar = $('alertbar');
+  bar.classList.toggle('safe', off === 0);
+  $('alertText').textContent = off === 0 ? 'All systems online · station stable' : `Alert · ${off} system${off > 1 ? 's' : ''} offline`;
+  $('bayCardEl').classList.toggle('alarm', mode === 'detective' && off > 0);
+}
+function newPuzzle() {
+  game.level = Math.min(5, game.score + 1);
+  let p; for (let k = 0; k < 6; k++) { p = genPuzzle(game.level); if (p.kind !== game.lastKind) break; }
+  game.puzzle = p; game.lastKind = p.kind; game.misses = 0; game.solved = false; game.revealed = false;
+  const w = worlds.detective; Object.assign(w, makeWorld());
+  w.axis = { x: p.axis.x, y: p.axis.y, locked: p.axisLocked };
+  w.masses = p.lockedMasses.map(m => ({ id: nextId++, m: m.m, x: m.x, y: m.y, locked: true }));
+  w.force = p.force ? { ...p.force, locked: true } : null;
+  w.burn = p.fixedBurn || 2.0;
+  renderMission(); renderSelect();
+}
+function renderMission() {
+  const p = game.puzzle, w = worlds.detective;
+  const sys = SYSTEMS[game.level];
+  $('pips').innerHTML = `<span class="lvl" style="margin-left:0">Repair ${game.level} of 5 · ${sys.name} · ${p.kind}</span>`;
+  $('story').innerHTML = `<b>⚠ ${sys.name.toUpperCase()} OFFLINE.</b> ${pick(sys.story)}`;
+  $('prompt').innerHTML = `<span style="color:var(--label);font-size:14px;letter-spacing:1px;font-weight:800">FLIGHT COMPUTER SPEC:</span><br>` + p.prompt;
+  renderSystems();
+  const g = [];
+  g.push(`Axle at (${mn(p.axis.x)}, ${mn(p.axis.y)}) cm${p.axisLocked ? '' : ' (movable)'}`);
+  p.lockedMasses.forEach(m => g.push(`Mass ${m.m.toFixed(1)} kg bolted at (${mn(m.x)}, ${mn(m.y)}) cm`));
+  if (p.force) g.push(`Thruster fixed at (${mn(p.force.x)}, ${mn(p.force.y)}) cm, F = ${p.force.F.toFixed(1)} N, pointing ${p.force.ang}° anticlockwise from +x`);
+  if (p.fixedBurn) g.push(`Burn time locked: Δt = ${p.fixedBurn.toFixed(1)} s`);
+  $('given').innerHTML = g.map(s => `<li>${s}</li>`).join('');
+  $('paletteWrap').hidden = !p.palette.length;
+  $('dtTools').hidden = !p.needs.force;
+  $('burnRow').hidden = !(p.needs.burn || p.fixedBurn);
+  $('dBurn').disabled = !!p.fixedBurn; $('dBurn').value = w.burn.toFixed(1);
+  $('answers').innerHTML = p.answers.map(a => `<div class="row"><label>${a.label} =</label><input type="text" id="ans_${a.key}" placeholder="?"><span class="u">${a.unit}</span></div>`).join('');
+  $('feedback').innerHTML = 'Set up the system, then press Check.';
+  $('btnSolution').hidden = true; $('btnNext').hidden = true; $('solution').hidden = true; $('solution').innerHTML = '';
+  $('btnCheck').disabled = false;
+  renderPalette();
+}
+function renderPalette() {
+  if (mode !== 'detective' || !game.puzzle) return;
+  const p = game.puzzle, w = worlds.detective;
+  const vals = [...new Set(p.palette)].sort((a, b) => a - b);
+  $('chips').innerHTML = vals.map(v => {
+    const total = p.palette.filter(x => x === v).length, used = w.masses.filter(m => !m.locked && m.m === v).length, left = total - used;
+    return `<button class="chip" data-m="${v}" ${left <= 0 ? 'disabled' : ''}>${v.toFixed(1)} kg × ${left}</button>`;
+  }).join('');
+  $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    const sp = freeSpot(w), id = nextId++; resetSim(w);
+    w.masses.push({ id, m: +b.dataset.m, x: sp.x, y: sp.y, locked: false }); w.sel = { type: 'mass', id };
+    renderPalette(); renderSelect();
+  });
+  $('btnThrusterDt').textContent = w.force && !w.force.locked ? '− Remove thruster' : '+ Add thruster';
+}
+$('dBurn').addEventListener('change', () => { const w = worlds.detective; w.burn = clamp(Math.round((parseNum($('dBurn').value) || 2) * 10) / 10, 0.1, 20); $('dBurn').value = w.burn.toFixed(1); resetSim(w); });
+$('btnCheck').onclick = () => {
+  const p = game.puzzle, w = worlds.detective; if (game.solved) return;
+  const ans = {}; p.answers.forEach(a => ans[a.key] = parseNum($('ans_' + a.key).value));
+  const res = p.check(w, ans).filter(Boolean), ok = res.every(r => r.ok);
+  let h = `<ul class="fb">${res.map(r => `<li class="${r.ok ? 'ok' : 'no'}">${r.ok ? '✓' : '✗'} ${r.label}: ${r.msg}</li>`).join('')}</ul>`;
+  if (ok) {
+    game.solved = true; $('btnCheck').disabled = true;
+    if (game.revealed) {
+      h += `<div class="banner help">Repair matches the spec, but it was made with Mission Control's worked solution. The system needs a fresh fault fixed on your own before it will come back online: press New puzzle.</div>`;
+    } else {
+      game.score++;
+      h += `<div class="banner ok">✓ ${SYSTEMS[game.level].name.toUpperCase()} BACK ONLINE. ${game.score}/5 systems restored.</div>`;
+      if (game.score >= 5) { $('winOverlay').hidden = false; } else $('btnNext').hidden = false;
+    }
+    renderPips();
+  } else {
+    game.misses++;
+    if (game.misses >= 3) $('btnSolution').hidden = false;
+    h += `<div class="hint">Repair rejected by the flight computer. Failed attempts: ${game.misses}${game.misses < 3 ? ' (Mission Control can send a worked solution after 3)' : '. Mission Control is standing by with a worked solution.'}</div>`;
+  }
+  $('feedback').innerHTML = h;
+};
+function renderPips() { renderSystems(); }
+$('btnSolution').onclick = () => {
+  game.revealed = true; $('solution').hidden = false;
+  $('solution').innerHTML = `<div class="hint">Transmission from Mission Control: worked solution (anticlockwise positive, angles measured anticlockwise from +x).</div>` + game.puzzle.solution();
+  $('btnSolution').hidden = true;
+};
+$('btnNext').onclick = () => newPuzzle();
+$('btnNewPuzzle').onclick = () => newPuzzle();
+$('btnRestart').onclick = () => startGame();
+$('btnWinNew').onclick = () => { $('winOverlay').hidden = true; startGame(); };
+$('btnWinClose').onclick = () => { $('winOverlay').hidden = true; };
+
+// ================= modes =================
+function setMode(m) {
+  mode = m;
+  $('tabSandbox').classList.toggle('on', m === 'sandbox'); $('tabDetective').classList.toggle('on', m === 'detective');
+  $('sbTop').hidden = m !== 'sandbox'; $('sbBottom').hidden = m !== 'sandbox';
+  $('dtTop').hidden = m !== 'detective'; $('dtBottom').hidden = m !== 'detective';
+  if (m === 'detective' && !game.puzzle) startGame();
+  if (m === 'detective') renderSystems(); else $('bayCardEl').classList.remove('alarm');
+  setCaption(); renderSelect(); renderPalette();
+}
+$('tabSandbox').onclick = () => setMode('sandbox');
+$('tabDetective').onclick = () => setMode('detective');
+
+// ================= loop =================
+function stepFree(w, dt) {
+  const s = w.sim.snap, f = w.force, n = 10, h = dt / n;
+  for (let i = 0; i < n; i++) {
+    const tm = w.sim.t + h / 2;
+    if (tm <= w.sim.burn) { const a = f.ang * DEG + kin(s, w.sim.burn, tm).phi; w.sim.v.x += s.acm * Math.cos(a) * h; w.sim.v.y += s.acm * Math.sin(a) * h; }
+    w.sim.pos.x += w.sim.v.x * h * 100; w.sim.pos.y += w.sim.v.y * h * 100;
+    w.sim.t += h;
+  }
+  const tr = w.sim.trail, lt = tr[tr.length - 1];
+  if (!lt || Math.hypot(lt.x - w.sim.pos.x, lt.y - w.sim.pos.y) > 0.4) { tr.push({ x: w.sim.pos.x, y: w.sim.pos.y }); if (tr.length > 3000) tr.shift(); }
+  if (!$('chkCam').checked && (Math.abs(w.sim.pos.x) > 60 || Math.abs(w.sim.pos.y) > 60)) { w.sim.running = false; flash('DRIFTED OUT OF THE BAY · TRY CAMERA FOLLOW'); }
+}
+let last = performance.now(), roAcc = 1;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const w = W();
+  if (w.sim.running) {
+    if (w.free) stepFree(w, dt); else w.sim.t += dt;
+    if (mode === 'sandbox') { const lh = w.hist[w.hist.length - 1]; if (!lh || w.sim.t - lh.t > 0.04) { w.hist.push({ t: w.sim.t, omega: currentKin(w).omega }); if (w.hist.length > 4000) w.hist.shift(); } }
+  }
+  updDust(dt); draw(now); hud();
+  roAcc += dt; if (roAcc > 0.1 && mode === 'sandbox') { roAcc = 0; renderReadouts(); drawGraph(); }
+  requestAnimationFrame(frame);
+}
+initSandbox(); setMode('sandbox'); renderReadouts();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
